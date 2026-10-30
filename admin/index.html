@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Seahorse 后台</title>
+  <link rel="stylesheet" href="/admin/admin.css" />
+</head>
+<body>
+  <div class="login-view" id="login-view">
+    <form class="login-card" id="login-form">
+      <h1>Seahorse 后台</h1>
+      <p>用来更新型号、描述、图片、询盘和联系信息。当前只在本机运行，云主机准备好后再部署。</p>
+      <label>密码
+        <input name="password" type="password" autocomplete="current-password" required />
+      </label>
+      <p><button class="primary" type="submit">进入后台</button></p>
+      <p class="error" id="login-error"></p>
+    </form>
+  </div>
+
+  <div class="app" id="app" hidden>
+    <aside>
+      <div class="brand">Seahorse<span>内容管理</span></div>
+      <nav>
+        <button type="button" data-view="overview">概览</button>
+        <button type="button" data-view="grades">型号</button>
+        <button type="button" data-view="copy">描述文案</button>
+        <button type="button" data-view="media">图片</button>
+        <button type="button" data-view="inquiries">询盘与报价</button>
+        <button type="button" data-view="contact">联系信息</button>
+      </nav>
+      <a class="ghost" href="/" target="_blank" rel="noopener">查看网站</a>
+      <button class="ghost" id="logout" type="button">退出</button>
+    </aside>
+    <main>
+      <div class="topbar">
+        <h1 id="view-title">概览</h1>
+        <div>
+          <span class="muted" id="save-state"></span>
+          <button class="primary" id="save" type="button" hidden>保存</button>
+        </div>
+      </div>
+      <div id="view"></div>
+    </main>
+  </div>
+  <script src="/admin/admin.js"></script>
+</body>
+</html>

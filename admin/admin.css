@@ -1,0 +1,142 @@
+:root {
+  --sea: #102824;
+  --paper: #f3f0e8;
+  --card: #fffcf6;
+  --ink: #17241f;
+  --muted: #5d6d66;
+  --line: #d9d1c3;
+  --signal: #e25b2a;
+  --sans: "Segoe UI", "Microsoft YaHei", sans-serif;
+  --serif: "Palatino Linotype", Palatino, Georgia, serif;
+}
+
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; }
+
+.login-view[hidden],
+.app[hidden] { display: none !important; }
+.login-view {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(700px 280px at 80% 0%, rgba(226, 91, 42, 0.16), transparent 60%),
+    var(--sea);
+}
+.login-card {
+  width: min(420px, calc(100% - 32px));
+  background: var(--card);
+  border-radius: 18px;
+  padding: 28px;
+}
+.login-card h1 {
+  margin: 0;
+  font-family: var(--serif);
+  font-weight: 500;
+}
+.login-card p { color: var(--muted); }
+.login-card label, .stack label { display: grid; gap: 6px; margin-top: 14px; }
+input, select, textarea {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: white;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+textarea { min-height: 84px; resize: vertical; }
+.primary, .ghost, .danger {
+  min-height: 40px;
+  border-radius: 999px;
+  border: 0;
+  padding: 0 16px;
+}
+.primary { background: var(--signal); color: white; }
+.ghost { background: transparent; border: 1px solid var(--line); }
+.danger { background: transparent; color: #9a3d16; }
+.error { color: #9a3d16; min-height: 1.4em; }
+
+.app { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+aside {
+  background: var(--sea);
+  color: #f4f7f5;
+  padding: 22px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.brand { font-family: var(--serif); font-size: 28px; padding: 0 8px; }
+.brand span { display: block; color: #c5d5ce; font-family: var(--sans); font-size: 13px; margin-top: 4px; }
+aside nav { display: grid; gap: 4px; }
+aside button {
+  text-align: left;
+  background: transparent;
+  color: #d5e2dc;
+  border: 0;
+  border-radius: 10px;
+  min-height: 40px;
+  padding: 0 10px;
+}
+aside button[aria-current="page"] { background: rgba(255, 252, 246, 0.1); color: white; }
+aside .ghost { margin-top: auto; color: #f4f7f5; border-color: rgba(244, 247, 245, 0.25); }
+
+main { padding: 22px 28px 48px; }
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+.topbar h1 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 34px; }
+.topbar div { display: flex; gap: 8px; align-items: center; }
+.notice { color: var(--muted); margin: 0 0 16px; }
+
+.cards { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.card, .panel {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 16px;
+}
+.card strong { display: block; font-family: var(--serif); font-size: 32px; font-weight: 500; }
+.card span, .muted { color: var(--muted); }
+
+.toolbar { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; background: var(--card); }
+th, td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+th { color: var(--muted); font-size: 13px; font-weight: 650; }
+td input, td select { min-width: 90px; }
+
+.fields { display: grid; gap: 12px; }
+.lang-row { display: flex; justify-content: space-between; align-items: end; gap: 12px; margin-bottom: 12px; }
+.lang-row label { width: 220px; }
+
+.media-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.media-grid img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; background: white; }
+.media-grid figcaption { margin: 8px 0; }
+
+.inquiry { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 12px; }
+.inquiry h2 { margin: 0 0 8px; font-size: 18px; }
+.status { display: flex; gap: 8px; align-items: center; }
+.tag {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: #e7efe9;
+  font-size: 13px;
+}
+
+@media (max-width: 980px) {
+  .app { grid-template-columns: 1fr; }
+  .cards, .media-grid, .inquiry { grid-template-columns: 1fr; }
+  aside nav { grid-template-columns: repeat(3, 1fr); }
+}
