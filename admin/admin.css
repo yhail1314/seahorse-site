@@ -6,8 +6,7 @@
   --muted: #5d6d66;
   --line: #d9d1c3;
   --signal: #e25b2a;
-  --sans: "Segoe UI", "Microsoft YaHei", sans-serif;
-  --serif: "Palatino Linotype", Palatino, Georgia, serif;
+  --sans: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Segoe UI", sans-serif;
 }
 
 * { box-sizing: border-box; }
@@ -16,6 +15,8 @@ body {
   background: var(--paper);
   color: var(--ink);
   font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.6;
 }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
@@ -39,10 +40,11 @@ a { color: inherit; }
 }
 .login-card h1 {
   margin: 0;
-  font-family: var(--serif);
-  font-weight: 500;
+  font-size: 22px;
+  font-weight: 600;
+  line-height: 1.4;
 }
-.login-card p { color: var(--muted); }
+.login-card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
 .login-card label, .stack label { display: grid; gap: 6px; margin-top: 14px; }
 input, select, textarea {
   width: 100%;
@@ -72,8 +74,8 @@ aside {
   flex-direction: column;
   gap: 18px;
 }
-.brand { font-family: var(--serif); font-size: 28px; padding: 0 8px; }
-.brand span { display: block; color: #c5d5ce; font-family: var(--sans); font-size: 13px; margin-top: 4px; }
+.brand { font-size: 22px; font-weight: 600; line-height: 1.2; padding: 0 8px; }
+.brand span { display: block; color: #c5d5ce; font-size: 12px; font-weight: 400; line-height: 1.5; margin-top: 4px; }
 aside nav { display: grid; gap: 4px; }
 aside button {
   text-align: left;
@@ -95,7 +97,7 @@ main { padding: 22px 28px 48px; }
   gap: 16px;
   margin-bottom: 18px;
 }
-.topbar h1 { margin: 0; font-family: var(--serif); font-weight: 500; font-size: 34px; }
+.topbar h1 { margin: 0; font-weight: 600; font-size: 20px; line-height: 1.4; }
 .topbar div { display: flex; gap: 8px; align-items: center; }
 .notice { color: var(--muted); margin: 0 0 16px; }
 
@@ -106,11 +108,11 @@ main { padding: 22px 28px 48px; }
   border-radius: 16px;
   padding: 16px;
 }
-.card strong { display: block; font-family: var(--serif); font-size: 32px; font-weight: 500; }
-.card span, .muted { color: var(--muted); }
+.card strong { display: block; font-size: 22px; font-weight: 600; line-height: 1.3; }
+.card span, .muted { color: var(--muted); font-size: 13px; line-height: 1.5; }
 
-.toolbar { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; }
-.table-wrap { overflow-x: auto; }
+.toolbar { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 12px; flex-wrap: wrap; }
+.table-wrap { overflow-x: auto; max-width: 100%; }
 table { width: 100%; border-collapse: collapse; background: var(--card); }
 th, td { border-bottom: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
 th { color: var(--muted); font-size: 13px; font-weight: 650; }
@@ -125,7 +127,7 @@ td input, td select { min-width: 90px; }
 .media-grid figcaption { margin: 8px 0; }
 
 .inquiry { display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 16px; margin-bottom: 12px; }
-.inquiry h2 { margin: 0 0 8px; font-size: 18px; }
+.inquiry h2 { margin: 0 0 8px; font-size: 16px; font-weight: 600; line-height: 1.4; }
 .status { display: flex; gap: 8px; align-items: center; }
 .tag {
   display: inline-block;
@@ -135,8 +137,24 @@ td input, td select { min-width: 90px; }
   font-size: 13px;
 }
 
+.app, main, aside { min-width: 0; }
+
 @media (max-width: 980px) {
-  .app { grid-template-columns: 1fr; }
-  .cards, .media-grid, .inquiry { grid-template-columns: 1fr; }
-  aside nav { grid-template-columns: repeat(3, 1fr); }
+  .app { grid-template-columns: 1fr; align-content: start; }
+  .cards { grid-template-columns: 1fr 1fr; }
+  .media-grid, .inquiry { grid-template-columns: 1fr; }
+  aside { padding: 16px 14px; gap: 12px; }
+  aside nav { display: flex; flex-wrap: wrap; gap: 6px; }
+  aside nav button { width: auto; }
+  aside .ghost { margin-top: 0; }
+  main { padding: 16px 16px 40px; }
+  .topbar { flex-wrap: wrap; align-items: flex-start; }
+  .login-card .primary { width: 100%; }
+  .lang-row { flex-direction: column; align-items: stretch; }
+  .lang-row label { width: 100%; }
+  td input, td select { min-width: 0; }
+}
+@media (max-width: 560px) {
+  .cards { grid-template-columns: 1fr; }
+  .media-grid { grid-template-columns: 1fr 1fr; }
 }
