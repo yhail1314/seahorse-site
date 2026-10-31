@@ -2,11 +2,14 @@ const http = require("http");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const { DatabaseSync } = require("node:sqlite");
 
 const root = __dirname;
 const dataDir = path.join(root, "data");
 const contentPath = path.join(dataDir, "content.json");
+const examplePath = path.join(dataDir, "content.example.json");
 const adminPath = path.join(dataDir, "admin.json");
+const dbPath = path.join(dataDir, "seahorse.sqlite");
 const port = Number(process.env.PORT) || 4178;
 const sessions = new Map();
 const imageNames = new Set(["block.jpg", "rov.jpg", "floats.jpg", "iso.jpg", "aaa.jpg", "hitech.jpg", "report.jpg", "factory.jpg"]);
@@ -45,27 +48,80 @@ function readBody(req, limit) {
   });
 }
 
-function ensureData() {
+function openDatabase() {
   fs.mkdirSync(dataDir, { recursive: true });
-  if (!fs.existsSync(contentPath)) {
-    fs.copyFileSync(path.join(dataDir, "content.example.json"), contentPath);
-  }
-  if (!fs.existsSync(adminPath)) {
-    const password = "Seahorse-local";
-    const salt = crypto.randomBytes(16).toString("hex");
-    const hash = crypto.scryptSync(password, salt, 32).toString("hex");
-    fs.writeFileSync(adminPath, JSON.stringify({ salt, hash }, null, 2));
-    console.log("Initial admin password: " + password);
-    console.log("Change it in the admin before sharing the site.");
-  }
+  const isNew = !fs.existsSync(dbPath);
+  const database = new DatabaseSync(dbPath);
+  database.exec(`
+    PRAGMA journal_mode = WAL;
+    CREATE TABLE IF NOT EXISTS documents (
+      name TEXT PRIMARY KEY,
+      body TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS admin (
+      id INTEGER PRIMARY KEY CHECK (id = 1),
+      salt TEXT NOT NULL,
+      hash TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS inquiries (
+      id TEXT PRIMARY KEY,
+      createdAt TEXT NOT NULL,
+      status TEXT NOT NULL,
+      quoteNote TEXT NOT NULL DEFAULT '',
+      application TEXT NOT NULL DEFAULT '',
+      depth TEXT NOT NULL DEFAULT '',
+      dimensions TEXT NOT NULL DEFAULT '',
+      quantity TEXT NOT NULL DEFAULT '',
+      finish TEXT NOT NULL DEFAULT '',
+      country TEXT NOT NULL DEFAULT '',
+      company TEXT NOT NULL DEFAULT '',
+      email TEXT NOT NULL DEFAULT '',
+      notes TEXT NOT NULL DEFAULT ''
+    );
+  `);
+  if (isNew) seedDatabase(database);
+  return database;
 }
 
-function readContent() {
-  return JSON.parse(fs.readFileSync(contentPath, "utf8"));
+function seedDatabase(database) {
+  const sourcePath = fs.existsSync(contentPath) ? contentPath : examplePath;
+  const source = JSON.parse(fs.readFileSync(sourcePath, "utf8"));
+  const catalog = { copy: source.copy, grades: source.grades, contact: source.contact };
+  database.prepare("INSERT INTO documents (name, body) VALUES ('content', ?)").run(JSON.stringify(catalog));
+  const insertInquiry = database.prepare(`INSERT INTO inquiries (
+    id, createdAt, status, quoteNote, application, depth, dimensions, quantity, finish, country, company, email, notes
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  (source.inquiries || []).forEach((item) => {
+    insertInquiry.run(item.id, item.createdAt, item.status || "new", item.quoteNote || "", item.application || "", item.depth || "", item.dimensions || "", item.quantity || "", item.finish || "", item.country || "", item.company || "", item.email || "", item.notes || "");
+  });
+  if (fs.existsSync(adminPath)) {
+    const admin = JSON.parse(fs.readFileSync(adminPath, "utf8"));
+    database.prepare("INSERT INTO admin (id, salt, hash) VALUES (1, ?, ?)").run(admin.salt, admin.hash);
+    return;
+  }
+  const password = "Seahorse-local";
+  const salt = crypto.randomBytes(16).toString("hex");
+  const hash = crypto.scryptSync(password, salt, 32).toString("hex");
+  database.prepare("INSERT INTO admin (id, salt, hash) VALUES (1, ?, ?)").run(salt, hash);
+  console.log("Initial admin password: " + password);
+  console.log("Change it in the admin before sharing the site.");
 }
 
-function writeContent(content) {
-  fs.writeFileSync(contentPath, JSON.stringify(content, null, 2));
+function readCatalog() {
+  const row = db.prepare("SELECT body FROM documents WHERE name = 'content'").get();
+  return JSON.parse(row.body);
+}
+
+function writeCatalog(catalog) {
+  db.prepare("UPDATE documents SET body = ? WHERE name = 'content'").run(JSON.stringify({
+    copy: catalog.copy,
+    grades: catalog.grades,
+    contact: catalog.contact
+  }));
+}
+
+function listInquiries() {
+  return db.prepare("SELECT * FROM inquiries ORDER BY createdAt DESC").all();
 }
 
 function publicContent(content) {
@@ -85,7 +141,7 @@ function isAuthed(req) {
 }
 
 function verifyPassword(password) {
-  const stored = JSON.parse(fs.readFileSync(adminPath, "utf8"));
+  const stored = db.prepare("SELECT salt, hash FROM admin WHERE id = 1").get();
   const actual = crypto.scryptSync(String(password), stored.salt, 32);
   const expected = Buffer.from(stored.hash, "hex");
   return actual.length === expected.length && crypto.timingSafeEqual(actual, expected);
@@ -94,7 +150,7 @@ function verifyPassword(password) {
 function savePassword(password) {
   const salt = crypto.randomBytes(16).toString("hex");
   const hash = crypto.scryptSync(String(password), salt, 32).toString("hex");
-  fs.writeFileSync(adminPath, JSON.stringify({ salt, hash }, null, 2));
+  db.prepare("UPDATE admin SET salt = ?, hash = ? WHERE id = 1").run(salt, hash);
 }
 
 function serveFile(res, filePath) {
@@ -140,7 +196,7 @@ const server = http.createServer(async (req, res) => {
     }
 
     if (pathname === "/api/content" && req.method === "GET") {
-      send(res, 200, publicContent(readContent()));
+      send(res, 200, publicContent(readCatalog()));
       return;
     }
 
@@ -150,23 +206,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
       const body = JSON.parse(await readBody(req, 2 * 1024 * 1024));
-      const current = readContent();
       if (!body.copy || !Array.isArray(body.grades) || !body.contact) {
         send(res, 400, { error: "内容不完整" });
         return;
       }
-      current.copy = body.copy;
-      current.grades = body.grades.map((grade) => {
-        const next = grade.slice(0, 7);
-        next[6] = Number(next[6]);
-        return next;
+      writeCatalog({
+        copy: body.copy,
+        grades: body.grades.map((grade) => {
+          const next = grade.slice(0, 7);
+          next[6] = Number(next[6]);
+          return next;
+        }),
+        contact: {
+          phone: String(body.contact.phone || "").trim(),
+          email: String(body.contact.email || "").trim(),
+          wechat: String(body.contact.wechat || "").trim()
+        }
       });
-      current.contact = {
-        phone: String(body.contact.phone || "").trim(),
-        email: String(body.contact.email || "").trim(),
-        wechat: String(body.contact.wechat || "").trim()
-      };
-      writeContent(current);
       send(res, 200, { ok: true });
       return;
     }
@@ -191,13 +247,12 @@ const server = http.createServer(async (req, res) => {
         send(res, 401, { error: "请先登录" });
         return;
       }
-      send(res, 200, { inquiries: readContent().inquiries || [] });
+      send(res, 200, { inquiries: listInquiries() });
       return;
     }
 
     if (pathname === "/api/inquiries" && req.method === "POST") {
       const body = JSON.parse(await readBody(req, 100000));
-      const content = readContent();
       const inquiry = {
         id: Date.now().toString(36),
         createdAt: new Date().toISOString(),
@@ -213,9 +268,11 @@ const server = http.createServer(async (req, res) => {
         email: String(body.email || ""),
         notes: String(body.notes || "")
       };
-      content.inquiries = content.inquiries || [];
-      content.inquiries.unshift(inquiry);
-      writeContent(content);
+      db.prepare(`INSERT INTO inquiries (
+        id, createdAt, status, quoteNote, application, depth, dimensions, quantity, finish, country, company, email, notes
+      ) VALUES (
+        @id, @createdAt, @status, @quoteNote, @application, @depth, @dimensions, @quantity, @finish, @country, @company, @email, @notes
+      )`).run(inquiry);
       send(res, 201, { ok: true });
       return;
     }
@@ -226,21 +283,23 @@ const server = http.createServer(async (req, res) => {
         send(res, 401, { error: "请先登录" });
         return;
       }
-      const content = readContent();
-      const index = (content.inquiries || []).findIndex((item) => item.id === inquiryMatch[1]);
-      if (index < 0) {
+      const existing = db.prepare("SELECT id FROM inquiries WHERE id = ?").get(inquiryMatch[1]);
+      if (!existing) {
         send(res, 404, { error: "询盘不存在" });
         return;
       }
       if (req.method === "DELETE") {
-        content.inquiries.splice(index, 1);
+        db.prepare("DELETE FROM inquiries WHERE id = ?").run(inquiryMatch[1]);
       } else {
         const body = JSON.parse(await readBody(req, 100000));
         const allowed = new Set(["new", "contacted", "quoted", "closed"]);
-        if (body.status && allowed.has(body.status)) content.inquiries[index].status = body.status;
-        if (typeof body.quoteNote === "string") content.inquiries[index].quoteNote = body.quoteNote;
+        if (body.status && allowed.has(body.status)) {
+          db.prepare("UPDATE inquiries SET status = ? WHERE id = ?").run(body.status, inquiryMatch[1]);
+        }
+        if (typeof body.quoteNote === "string") {
+          db.prepare("UPDATE inquiries SET quoteNote = ? WHERE id = ?").run(body.quoteNote, inquiryMatch[1]);
+        }
       }
-      writeContent(content);
       send(res, 200, { ok: true });
       return;
     }
@@ -279,7 +338,7 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-ensureData();
+const db = openDatabase();
 server.listen(port, "127.0.0.1", () => {
   console.log("Seahorse site: http://127.0.0.1:" + port + "/");
   console.log("Admin: http://127.0.0.1:" + port + "/admin");
